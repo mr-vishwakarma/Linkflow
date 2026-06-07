@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { 
+  AlertCircle, 
+  CheckCircle2, 
+  Info, 
+  PlusCircle, 
+  List, 
+  Calendar as CalendarIcon, 
+  Eye, 
+  TrendingUp 
+} from 'lucide-react';
 
 // Restructured modular components
 import Navbar from './components/Navbar';
@@ -54,6 +63,20 @@ export default function App() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState({ status: 'unconfigured', text: 'Checking status...' });
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  // Responsive window width resize trigger
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setActiveTab(prev => prev === 'compose' ? 'queue' : prev);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Compose state (autosaved to localStorage)
   const [caption, setCaption] = useState(localStorage.getItem('linkflow_draft_caption') || '');
@@ -456,7 +479,7 @@ export default function App() {
 
   // Render full dashboard if authenticated
   return (
-    <div className="bg-[#fbfaf7] text-stone-900 min-h-screen relative overflow-x-hidden font-sans pb-12 selection:bg-stone-200 selection:text-stone-800">
+    <div className="bg-[#fbfaf7] text-stone-900 min-h-screen relative overflow-x-hidden font-sans pb-24 lg:pb-12 selection:bg-stone-200 selection:text-stone-800">
       
       {/* Background Blobs */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-amber-200/20 rounded-full filter blur-[120px] pointer-events-none"></div>
@@ -477,26 +500,29 @@ export default function App() {
         {/* Dashboard grid panel */}
         <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* Left panel: Compose Draft form */}
-          <section className="lg:col-span-5 w-full">
-            <ComposerForm 
-              caption={caption}
-              setCaption={setCaption}
-              imageUrl={imageUrl}
-              setImageUrl={setImageUrl}
-              scheduleTime={scheduleTime}
-              setScheduleTime={setScheduleTime}
-              onSubmit={handleCreatePost}
-              apiFetch={apiFetch}
-              showToast={showToast}
-            />
-          </section>
+          {/* Left panel: Compose Draft form (Visible persistently on desktop, only when activeTab === 'compose' on mobile) */}
+          {(!isMobile || activeTab === 'compose') && (
+            <section className="lg:col-span-5 w-full">
+              <ComposerForm 
+                caption={caption}
+                setCaption={setCaption}
+                imageUrl={imageUrl}
+                setImageUrl={setImageUrl}
+                scheduleTime={scheduleTime}
+                setScheduleTime={setScheduleTime}
+                onSubmit={handleCreatePost}
+                apiFetch={apiFetch}
+                showToast={showToast}
+              />
+            </section>
+          )}
 
-          {/* Right panel: Switchable view tabs */}
-          <section className="lg:col-span-7 w-full flex flex-col">
-            
-            {/* View navigation buttons */}
-            <div className="flex gap-2 mb-4 border-b border-stone-200 pb-2">
+          {/* Right panel: Switchable view tabs (Visible persistently on desktop, hidden on mobile if activeTab === 'compose') */}
+          {(!isMobile || activeTab !== 'compose') && (
+            <section className="lg:col-span-7 w-full flex flex-col">
+              
+              {/* View navigation buttons */}
+              <div className="hidden lg:flex gap-2 mb-4 border-b border-stone-200 pb-2">
               <button 
                 onClick={() => setActiveTab('queue')}
                 className={`px-4 py-2 text-sm font-semibold transition relative cursor-pointer ${
@@ -573,8 +599,37 @@ export default function App() {
             )}
 
           </section>
+        )}
         </main>
       </div>
+
+      {/* Mobile Fixed Bottom Navigation Bar */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-md border-t border-stone-200/80 z-40 py-3 px-6 flex justify-around items-center shadow-2xl animate-slide-up">
+          {[
+            { id: 'compose', label: 'Compose', icon: PlusCircle },
+            { id: 'queue', label: 'Queue', icon: List },
+            { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+            { id: 'preview', label: 'Simulator', icon: Eye },
+            { id: 'analytics', label: 'Analytics', icon: TrendingUp }
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center gap-1.5 transition duration-150 relative cursor-pointer ${
+                  isActive ? 'text-stone-900 scale-105 font-semibold' : 'text-stone-400 hover:text-stone-600'
+                }`}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-[1.8px]'}`} />
+                <span className="text-[9px] uppercase tracking-wider font-semibold leading-none">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Settings configuration modal */}
       <SettingsModal 
