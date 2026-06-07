@@ -10,6 +10,33 @@ import SettingsModal from './features/settings/components/SettingsModal';
 import Login from './features/auth/components/Login';
 import Signup from './features/auth/components/Signup';
 
+let activeRefreshPromise = null;
+
+const refreshSessionToken = async (storedRefreshToken) => {
+  if (activeRefreshPromise) {
+    return activeRefreshPromise;
+  }
+
+  activeRefreshPromise = (async () => {
+    try {
+      const res = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: storedRefreshToken })
+      });
+      const data = await res.json();
+      return data;
+    } catch (err) {
+      console.error('Initial auto-login check failed:', err);
+      return { success: false, error: err.message };
+    } finally {
+      activeRefreshPromise = null;
+    }
+  })();
+
+  return activeRefreshPromise;
+};
+
 export default function App() {
   // Authentication states
   const [token, setToken] = useState(null);
@@ -69,18 +96,15 @@ export default function App() {
 
   // Handle silent token refresh on app boot
   useEffect(() => {
+    let active = true;
     const checkAuth = async () => {
       const storedRefreshToken = localStorage.getItem('refreshToken');
       const storedEmail = localStorage.getItem('userEmail');
       
       if (storedRefreshToken && storedEmail) {
         try {
-          const res = await fetch('/api/auth/refresh', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken: storedRefreshToken })
-          });
-          const data = await res.json();
+          const data = await refreshSessionToken(storedRefreshToken);
+          if (!active) return;
           if (data.success) {
             setToken(data.accessToken);
             localStorage.setItem('token', data.accessToken);
@@ -96,12 +120,15 @@ export default function App() {
           }
         } catch (err) {
           console.error('Initial auto-login check failed:', err);
-          handleLogoutSilently();
+          if (active) handleLogoutSilently();
         }
       }
-      setIsAuthChecking(false);
+      if (active) setIsAuthChecking(false);
     };
     checkAuth();
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Fetch configs and queue list when authenticated
@@ -110,6 +137,17 @@ export default function App() {
 
     loadConfig();
     loadPosts();
+
+    // Auto-sync Notion silently in the background on dashboard mount/login
+    const autoSyncNotion = async () => {
+      try {
+        await apiFetch('/api/sync', { method: 'POST' });
+        loadPosts();
+      } catch (err) {
+        console.error('Silent auto Notion sync failed:', err);
+      }
+    };
+    autoSyncNotion();
 
     // Reload posts every 12 seconds
     const interval = setInterval(loadPosts, 12000);
@@ -147,12 +185,7 @@ export default function App() {
         if (data.code === 'TOKEN_EXPIRED') {
           const storedRefreshToken = localStorage.getItem('refreshToken') || refreshToken;
           if (storedRefreshToken) {
-            const refreshRes = await fetch('/api/auth/refresh', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refreshToken: storedRefreshToken })
-            });
-            const refreshData = await refreshRes.json();
+            const refreshData = await refreshSessionToken(storedRefreshToken);
             if (refreshData.success) {
               const newToken = refreshData.accessToken;
               setToken(newToken);

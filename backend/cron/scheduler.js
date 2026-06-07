@@ -14,6 +14,20 @@ const runScheduledJobs = async () => {
   console.log(`[Scheduler] Checking for due posts at ${now.toISOString()}...`);
   
   try {
+    const config = await Config.getOrCreate();
+
+    // Auto-sync from Notion if configured
+    if (config.notionToken && config.notionDatabaseId) {
+      console.log('[Scheduler] Auto-syncing from Notion database...');
+      try {
+        const { syncNotionDatabase } = require('../services/notionService');
+        const syncRes = await syncNotionDatabase(config);
+        console.log(`[Scheduler] Notion auto-sync complete. Added: ${syncRes.addedCount}, Updated: ${syncRes.updatedCount}`);
+      } catch (syncErr) {
+        console.error('[Scheduler] Notion auto-sync failed:', syncErr.message);
+      }
+    }
+
     const duePosts = await Post.find({
       status: 'pending',
       scheduledTime: { $lte: now }
@@ -25,7 +39,6 @@ const runScheduledJobs = async () => {
     }
 
     console.log(`[Scheduler] Found ${duePosts.length} due posts at ${now.toISOString()}. Processing...`);
-    const config = await Config.getOrCreate();
     let success = 0;
     let failed = 0;
 
