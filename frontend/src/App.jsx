@@ -486,6 +486,8 @@ export default function App() {
               scheduleTime={scheduleTime}
               setScheduleTime={setScheduleTime}
               onSubmit={handleCreatePost}
+              apiFetch={apiFetch}
+              showToast={showToast}
             />
           </section>
 

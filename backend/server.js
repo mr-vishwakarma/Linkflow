@@ -14,6 +14,7 @@ const configRoutes = require('./routes/configRoutes');
 const postRoutes   = require('./routes/postRoutes');
 const syncRoutes   = require('./routes/syncRoutes');
 const cronRoutes   = require('./routes/cronRoutes');
+const aiRoutes     = require('./routes/aiRoutes');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -54,6 +55,7 @@ app.use('/api/auth', authRateLimiter, authRoutes);
 app.use('/api/config', apiRateLimiter, authMiddleware, configRoutes);
 app.use('/api/posts',  apiRateLimiter, authMiddleware, postRoutes);
 app.use('/api/sync',   apiRateLimiter, authMiddleware, syncRoutes);
+app.use('/api/ai',     apiRateLimiter, authMiddleware, aiRoutes);
 app.use('/api/cron',   cronRoutes);
 
 // ── Scheduler ─────────────────────────────────────────────────────────────────
