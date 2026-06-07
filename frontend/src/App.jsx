@@ -21,6 +21,9 @@ import Signup from './features/auth/components/Signup';
 import AnalyticsDashboard from './features/analytics/components/AnalyticsDashboard';
 import ContentCalendar from './features/calendar/components/ContentCalendar';
 
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 let activeRefreshPromise = null;
 
 const refreshSessionToken = async (storedRefreshToken) => {
@@ -88,7 +91,6 @@ export default function App() {
 
   // Syncing states
   const [isSyncing, setIsSyncing] = useState(false);
-  const [toast, setToast] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, postId: null });
 
   // Setup default schedule date (+1 hour) if none restored from localStorage
@@ -182,16 +184,11 @@ export default function App() {
     return () => clearInterval(interval);
   }, [token]);
 
-  // Toast alert dismisser timer
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3800);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-
   const showToast = (message, type = 'info') => {
-    setToast({ message, type });
+    if (type === 'success') toast.success(message);
+    else if (type === 'error') toast.error(message);
+    else if (type === 'warning') toast.warning(message);
+    else toast.info(message);
   };
 
   // Custom authenticated fetch wrapper with silent refresh and automatic retries
@@ -204,44 +201,53 @@ export default function App() {
       options.headers['Authorization'] = `Bearer ${currentToken}`;
     }
     
-    let res = await fetch(url, options);
-    
-    if (res.status === 401) {
-      const clone = res.clone();
-      try {
-        const data = await clone.json();
-        if (data.code === 'TOKEN_EXPIRED') {
-          const storedRefreshToken = localStorage.getItem('refreshToken') || refreshToken;
-          if (storedRefreshToken) {
-            const refreshData = await refreshSessionToken(storedRefreshToken);
-            if (refreshData.success) {
-              const newToken = refreshData.accessToken;
-              setToken(newToken);
-              localStorage.setItem('token', newToken);
+    try {
+      let res = await fetch(url, options);
 
-              // Store the rotated refresh token if the server issued a new one
-              if (refreshData.refreshToken) {
-                setRefreshToken(refreshData.refreshToken);
-                localStorage.setItem('refreshToken', refreshData.refreshToken);
+      if (res.status === 429) {
+        showToast('Too many requests. Please slow down.', 'warning');
+      } else if (res.status >= 500) {
+        showToast('Server encountered an error. Please try again later.', 'error');
+      }
+      
+      if (res.status === 401) {
+        const clone = res.clone();
+        try {
+          const data = await clone.json();
+          if (data.code === 'TOKEN_EXPIRED') {
+            const storedRefreshToken = localStorage.getItem('refreshToken') || refreshToken;
+            if (storedRefreshToken) {
+              const refreshData = await refreshSessionToken(storedRefreshToken);
+              if (refreshData.success) {
+                const newToken = refreshData.accessToken;
+                setToken(newToken);
+                localStorage.setItem('token', newToken);
+
+                if (refreshData.refreshToken) {
+                  setRefreshToken(refreshData.refreshToken);
+                  localStorage.setItem('refreshToken', refreshData.refreshToken);
+                }
+                
+                options.headers['Authorization'] = `Bearer ${newToken}`;
+                res = await fetch(url, options);
+              } else {
+                handleLogoutSilently();
               }
-              
-              // Retry original request with the new token
-              options.headers['Authorization'] = `Bearer ${newToken}`;
-              res = await fetch(url, options);
             } else {
               handleLogoutSilently();
             }
           } else {
             handleLogoutSilently();
           }
-        } else {
+        } catch (err) {
           handleLogoutSilently();
         }
-      } catch (err) {
-        handleLogoutSilently();
       }
+      return res;
+    } catch (err) {
+      showToast(`Network request failed: ${err.message}`, 'error');
+      throw err;
     }
-    return res;
   };
 
   const handleLoginSuccess = (authData) => {
@@ -685,20 +691,18 @@ export default function App() {
       )}
 
       {/* Global notifications overlay */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 flex flex-col gap-2.5 z-[100] max-w-sm pointer-events-none">
-          <div className={`flex items-center gap-3 pl-4 pr-5 py-3.5 rounded-xl bg-white border border-stone-200 shadow-lg border-l-4 transition-all duration-350 pointer-events-auto ${
-            toast.type === 'success' ? 'border-l-emerald-600 text-emerald-600' :
-            toast.type === 'error' ? 'border-l-rose-600 text-rose-600' :
-            'border-l-stone-600 text-stone-600'
-          }`}>
-            {toast.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> :
-             toast.type === 'error' ? <AlertCircle className="w-4 h-4 text-rose-600" /> :
-             <Info className="w-4 h-4 text-stone-600" />}
-            <span className="text-xs font-semibold text-stone-800">{toast.message}</span>
-          </div>
-        </div>
-      )}
+      <ToastContainer 
+        position="bottom-right" 
+        autoClose={3800} 
+        hideProgressBar={false} 
+        newestOnTop={true} 
+        closeOnClick 
+        pauseOnFocusLoss 
+        draggable 
+        pauseOnHover 
+        theme="light" 
+        toastClassName="font-sans text-sm rounded-xl shadow-lg border border-stone-200"
+      />
 
     </div>
   );
