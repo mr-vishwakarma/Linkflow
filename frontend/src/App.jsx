@@ -9,6 +9,7 @@ import LinkedInPreview from './features/preview/components/LinkedInPreview';
 import SettingsModal from './features/settings/components/SettingsModal';
 import Login from './features/auth/components/Login';
 import Signup from './features/auth/components/Signup';
+import AnalyticsDashboard from './features/analytics/components/AnalyticsDashboard';
 
 let activeRefreshPromise = null;
 
@@ -513,10 +514,20 @@ export default function App() {
               >
                 Feed Simulator
               </button>
+              <button 
+                onClick={() => setActiveTab('analytics')}
+                className={`px-4 py-2 text-sm font-semibold transition relative cursor-pointer ${
+                  activeTab === 'analytics' 
+                    ? 'text-stone-900 border-b-2 border-stone-900' 
+                    : 'text-stone-400 hover:text-stone-600'
+                }`}
+              >
+                Analytics
+              </button>
             </div>
 
             {/* View mapping */}
-            {activeTab === 'queue' ? (
+            {activeTab === 'queue' && (
               <PostQueue 
                 posts={posts}
                 activeFilter={activeFilter}
@@ -525,11 +536,17 @@ export default function App() {
                 onForcePublish={handleForcePublish}
                 formatLocalDateTime={formatLocalDateTime}
               />
-            ) : (
+            )}
+            {activeTab === 'preview' && (
               <LinkedInPreview 
                 text={caption}
                 imageUrl={imageUrl}
                 authorName={config?.linkedinUrn}
+              />
+            )}
+            {activeTab === 'analytics' && (
+              <AnalyticsDashboard 
+                posts={posts}
               />
             )}
 

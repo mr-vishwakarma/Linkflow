@@ -107,6 +107,7 @@ const publishPost = async (req, res) => {
     if (postUrn) {
       postUrl = `https://www.linkedin.com/feed/update/${postUrn}`;
       post.postUrl = postUrl;
+      post.postUrn = postUrn;
     }
 
     post.status = 'posted';

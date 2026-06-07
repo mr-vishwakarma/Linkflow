@@ -131,4 +131,36 @@ const publishToLinkedIn = async (post, config) => {
   }
 };
 
-module.exports = { publishToLinkedIn };
+/**
+ * Fetches engagement statistics (likes and comments) for a specific post URN.
+ * @param {string} postUrn
+ * @param {Object} config - { linkedinToken }
+ * @returns {Promise<Object>} - { likes: Number, comments: Number }
+ */
+const getPostMetrics = async (postUrn, config) => {
+  if (!config.linkedinToken) {
+    throw new Error('LinkedIn Access Token is not configured.');
+  }
+
+  const headers = {
+    'Authorization': `Bearer ${config.linkedinToken}`,
+    'Content-Type': 'application/json',
+    'LinkedIn-Version': LINKEDIN_API_VERSION,
+    'X-Restli-Protocol-Version': '2.0.0'
+  };
+
+  try {
+    const encodedUrn = encodeURIComponent(postUrn);
+    const { data } = await axios.get(`${LINKEDIN_BASE}/rest/socialActions/${encodedUrn}`, { headers });
+    
+    const likes = data.likesSummary?.totalLikes || 0;
+    const comments = data.commentsSummary?.totalFirstLevelComments || 0;
+    
+    return { likes, comments };
+  } catch (err) {
+    console.error(`[LinkedIn Service] Failed to fetch metrics for ${postUrn}:`, err.response?.data || err.message);
+    return { likes: 0, comments: 0 };
+  }
+};
+
+module.exports = { publishToLinkedIn, getPostMetrics };

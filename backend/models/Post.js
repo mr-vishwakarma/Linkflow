@@ -27,6 +27,16 @@ const PostSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  postUrn: {
+    type: String,
+    default: ''
+  },
+  analytics: {
+    likes: { type: Number, default: 0 },
+    comments: { type: Number, default: 0 },
+    shares: { type: Number, default: 0 },
+    lastUpdatedAt: { type: Date, default: null }
+  },
   error: {
     type: String,
     default: null

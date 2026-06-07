@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const Post = require('../models/Post');
 const Config = require('../models/Config');
-const { publishToLinkedIn } = require('../services/linkedinService');
+const { publishToLinkedIn, getPostMetrics } = require('../services/linkedinService');
 const { updateNotionPageStatus } = require('../services/notionService');
 const { sendSuccessNotification } = require('../services/notificationService');
 
@@ -9,6 +9,46 @@ const { sendSuccessNotification } = require('../services/notificationService');
  * Checks for pending posts whose scheduled time is in the past, and publishes them.
  * This function is used by both local node-cron and Vercel serverless cron routes.
  */
+const updateAllPostMetrics = async (config) => {
+  try {
+    if (!config.linkedinToken) return;
+
+    // Find posts published in the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const activePosts = await Post.find({
+      status: 'posted',
+      postedAt: { $gte: thirtyDaysAgo },
+      postUrn: { $exists: true, $ne: '' }
+    });
+
+    if (activePosts.length === 0) return;
+
+    console.log(`[Scheduler] Checking/updating engagement metrics for ${activePosts.length} posts...`);
+    
+    for (const post of activePosts) {
+      // Throttle: only update if not updated in the last 15 minutes
+      const lastUpdated = post.analytics?.lastUpdatedAt;
+      if (lastUpdated && (new Date() - lastUpdated < 15 * 60 * 1000)) {
+        continue;
+      }
+
+      const metrics = await getPostMetrics(post.postUrn, config);
+      post.analytics = {
+        likes: metrics.likes,
+        comments: metrics.comments,
+        shares: 0,
+        lastUpdatedAt: new Date()
+      };
+      await post.save();
+      console.log(`[Scheduler] Updated metrics for post ${post._id}: likes=${metrics.likes}, comments=${metrics.comments}`);
+    }
+  } catch (err) {
+    console.error('[Scheduler] Failed to update post metrics:', err.message);
+  }
+};
+
 const runScheduledJobs = async () => {
   const now = new Date();
   console.log(`[Scheduler] Checking for due posts at ${now.toISOString()}...`);
@@ -27,6 +67,9 @@ const runScheduledJobs = async () => {
         console.error('[Scheduler] Notion auto-sync failed:', syncErr.message);
       }
     }
+
+    // Auto-update engagement metrics
+    await updateAllPostMetrics(config);
 
     const duePosts = await Post.find({
       status: 'pending',
@@ -53,6 +96,7 @@ const runScheduledJobs = async () => {
         if (postUrn) {
           postUrl = `https://www.linkedin.com/feed/update/${postUrn}`;
           post.postUrl = postUrl;
+          post.postUrn = postUrn;
         }
         
         post.status = 'posted';
