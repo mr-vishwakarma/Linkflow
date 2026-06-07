@@ -35,6 +35,9 @@ const refreshSessionToken = async (storedRefreshToken) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: storedRefreshToken })
       });
+      if (!res.ok) {
+        return { success: false, error: `HTTP ${res.status}` };
+      }
       const data = await res.json();
       return data;
     } catch (err) {

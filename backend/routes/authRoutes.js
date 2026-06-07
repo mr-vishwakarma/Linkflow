@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const { signup, login, refresh, logout, linkedinAuth, linkedinCallback } = require('../controllers/authController');
+const { authRateLimiter, refreshRateLimiter } = require('../middleware/auth');
 
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
@@ -27,13 +28,13 @@ const loginValidation = [
   handleValidationErrors
 ];
 
-router.post('/signup', signupValidation, signup);
-router.post('/login', loginValidation, login);
-router.post('/refresh', refresh);
+router.post('/signup', authRateLimiter, signupValidation, signup);
+router.post('/login', authRateLimiter, loginValidation, login);
+router.post('/refresh', refreshRateLimiter, refresh);
 router.post('/logout', logout);
 
 // LinkedIn OAuth2 Routes
-router.get('/linkedin', linkedinAuth);
-router.get('/linkedin/callback', linkedinCallback);
+router.get('/linkedin', authRateLimiter, linkedinAuth);
+router.get('/linkedin/callback', authRateLimiter, linkedinCallback);
 
 module.exports = router;

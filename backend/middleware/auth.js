@@ -40,7 +40,7 @@ const rateLimitMap = new Map();
 
 const createRateLimiter = ({ windowMs = 60_000, max = 20, message = 'Too many requests, please slow down.' } = {}) => {
   return (req, res, next) => {
-    const ip = req.ip || req.connection.remoteAddress;
+    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress || req.ip;
     const now = Date.now();
     const window = rateLimitMap.get(ip) || { count: 0, start: now };
 
@@ -60,10 +60,13 @@ const createRateLimiter = ({ windowMs = 60_000, max = 20, message = 'Too many re
   };
 };
 
-// Strict limiter for auth endpoints (login, signup, refresh)
+// Strict limiter for auth endpoints (login, signup)
 const authRateLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: 15, message: 'Too many auth attempts. Try again in 15 minutes.' });
+
+// Less strict limiter for refresh endpoints to accommodate multi-tab users
+const refreshRateLimiter = createRateLimiter({ windowMs: 60_000, max: 50, message: 'Too many refresh requests.' });
 
 // Relaxed limiter for general API endpoints
 const apiRateLimiter = createRateLimiter({ windowMs: 60_000, max: 60 });
 
-module.exports = { authMiddleware, authRateLimiter, apiRateLimiter };
+module.exports = { authMiddleware, authRateLimiter, refreshRateLimiter, apiRateLimiter };

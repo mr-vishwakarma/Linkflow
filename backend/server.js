@@ -6,7 +6,7 @@ const cors    = require('cors');
 const helmet  = require('helmet');
 const connectDB = require('./config/db');
 const { initScheduler } = require('./cron/scheduler');
-const { authMiddleware, authRateLimiter, apiRateLimiter } = require('./middleware/auth');
+const { authMiddleware, authRateLimiter, refreshRateLimiter, apiRateLimiter } = require('./middleware/auth');
 
 // Route files
 const authRoutes   = require('./routes/authRoutes');
@@ -70,8 +70,8 @@ app.get('/api/health', (req, res) => {
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
-// Public auth routes (strict rate limit)
-app.use('/api/auth', authRateLimiter, authRoutes);
+// Public auth routes (rate limits applied in authRoutes)
+app.use('/api/auth', authRoutes);
 
 // Protected application routes (JWT required + general rate limit)
 app.use('/api/config', apiRateLimiter, authMiddleware, configRoutes);
