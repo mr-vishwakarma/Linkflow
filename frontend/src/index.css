@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream-bg: #fbfaf7;
+  --color-cream-card: #ffffff;
+  --color-cream-border: #e7e5e4;
+  --color-cream-text: #1c1917;
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+  --font-inter: "Inter", sans-serif;
+}
+
+body {
+  @apply bg-[#fbfaf7] text-stone-900 min-h-screen relative overflow-x-hidden font-sans selection:bg-stone-200 selection:text-stone-800;
+}
+
+/* Custom Scrollbar for posts queue container */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(28, 25, 23, 0.1);
+  border-radius: 99px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(28, 25, 23, 0.25);
+}
+
+/* Glow border helpers for queue status */
+.status-border-pending {
+  border-left: 3px solid #d97706; /* Amber border */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.status-border-posted {
+  border-left: 3px solid #059669; /* Emerald border */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.status-border-failed {
+  border-left: 3px solid #dc2626; /* Rose border */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.status-border-publishing {
+  border-left: 3px solid #2563eb; /* Blue border */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}

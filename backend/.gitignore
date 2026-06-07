@@ -1,0 +1,15 @@
+# ── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Environment secrets (NEVER commit these) ──────────────────────────────────
+.env
+.env.local
+.env.production
+
+# ── Local image uploads (use ImageKit in production) ─────────────────────────
+uploads/
+
+# ── OS & Editor junk ──────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
