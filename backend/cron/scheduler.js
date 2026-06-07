@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const Post = require('../models/Post');
 const Config = require('../models/Config');
-const { publishToLinkedIn, getPostMetrics } = require('../services/linkedinService');
+const linkedinService = require('../services/linkedinService');
 const { updateNotionPageStatus } = require('../services/notionService');
 const { sendSuccessNotification } = require('../services/notificationService');
 
@@ -34,7 +34,7 @@ const updateAllPostMetrics = async (config) => {
         continue;
       }
 
-      const metrics = await getPostMetrics(post.postUrn, config);
+      const metrics = await linkedinService.getPostMetrics(post.postUrn, config);
       post.analytics = {
         likes: metrics.likes,
         comments: metrics.comments,
@@ -72,8 +72,10 @@ const runScheduledJobs = async () => {
     await updateAllPostMetrics(config);
 
     const duePosts = await Post.find({
-      status: 'pending',
-      scheduledTime: { $lte: now }
+      $or: [
+        { status: 'pending', scheduledTime: { $lte: now } },
+        { status: 'failed', retryCount: { $lt: 3 }, nextRetryAt: { $lte: now } }
+      ]
     });
 
     if (duePosts.length === 0) {
@@ -91,7 +93,7 @@ const runScheduledJobs = async () => {
       console.log(`[Scheduler] Publishing post ID: ${post._id}`);
 
       try {
-        const postUrn = await publishToLinkedIn(post, config);
+        const postUrn = await linkedinService.publishToLinkedIn(post, config);
         let postUrl = '';
         if (postUrn) {
           postUrl = `https://www.linkedin.com/feed/update/${postUrn}`;
@@ -102,6 +104,8 @@ const runScheduledJobs = async () => {
         post.status = 'posted';
         post.postedAt = new Date();
         post.error = null;
+        post.retryCount = 0;
+        post.nextRetryAt = null;
         await post.save();
         console.log(`[Scheduler] Successfully published post ID: ${post._id}`);
 
@@ -116,8 +120,24 @@ const runScheduledJobs = async () => {
         success++;
       } catch (err) {
         console.error(`[Scheduler] Failed to publish post ID ${post._id}:`, err.message);
-        post.status = 'failed';
+        
+        post.retryCount = (post.retryCount || 0) + 1;
         post.error = err.message || 'Unknown error occurred';
+
+        if (post.retryCount < 3) {
+          // Exponential backoff base: 5 minutes (retry 1 = 5m, retry 2 = 10m, retry 3 = 20m)
+          const backoffMinutes = 5 * Math.pow(2, post.retryCount - 1);
+          const nextRetry = new Date();
+          nextRetry.setMinutes(nextRetry.getMinutes() + backoffMinutes);
+          post.nextRetryAt = nextRetry;
+          post.status = 'failed';
+          console.log(`[Scheduler] Scheduled retry #${post.retryCount} for post ID ${post._id} at ${nextRetry.toISOString()} (${backoffMinutes}m backoff).`);
+        } else {
+          post.status = 'failed';
+          post.nextRetryAt = null;
+          console.log(`[Scheduler] Post ID ${post._id} reached max retries limit (3). Marked permanently failed.`);
+        }
+        
         await post.save();
         failed++;
       }

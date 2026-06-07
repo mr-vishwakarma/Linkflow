@@ -43,7 +43,29 @@ connectDB();
 
 // ── Health check (for deployment platforms) ───────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, status: 'ok', timestamp: new Date().toISOString() });
+  const mongoose = require('mongoose');
+  const cacheService = require('./services/cacheService');
+  
+  const mongoState = mongoose.connection.readyState;
+  const isMongoConnected = mongoState === 1;
+  const isRedisConnected = cacheService.isReady();
+
+  const status = isMongoConnected ? 'ok' : 'error';
+  const diagnostics = {
+    success: isMongoConnected,
+    status,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    services: {
+      mongodb: isMongoConnected ? 'connected' : 'disconnected',
+      redisCache: isRedisConnected ? 'connected' : 'disconnected'
+    }
+  };
+
+  if (!isMongoConnected) {
+    return res.status(503).json(diagnostics);
+  }
+  res.json(diagnostics);
 });
 
 // ── Routes ────────────────────────────────────────────────────────────────────

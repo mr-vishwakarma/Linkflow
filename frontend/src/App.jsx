@@ -10,6 +10,7 @@ import SettingsModal from './features/settings/components/SettingsModal';
 import Login from './features/auth/components/Login';
 import Signup from './features/auth/components/Signup';
 import AnalyticsDashboard from './features/analytics/components/AnalyticsDashboard';
+import ContentCalendar from './features/calendar/components/ContentCalendar';
 
 let activeRefreshPromise = null;
 
@@ -526,6 +527,16 @@ export default function App() {
               >
                 Analytics
               </button>
+              <button 
+                onClick={() => setActiveTab('calendar')}
+                className={`px-4 py-2 text-sm font-semibold transition relative cursor-pointer ${
+                  activeTab === 'calendar' 
+                    ? 'text-stone-900 border-b-2 border-stone-900' 
+                    : 'text-stone-400 hover:text-stone-600'
+                }`}
+              >
+                Content Calendar
+              </button>
             </div>
 
             {/* View mapping */}
@@ -549,6 +560,15 @@ export default function App() {
             {activeTab === 'analytics' && (
               <AnalyticsDashboard 
                 posts={posts}
+              />
+            )}
+            {activeTab === 'calendar' && (
+              <ContentCalendar 
+                posts={posts}
+                apiFetch={apiFetch}
+                onRefresh={loadPosts}
+                showToast={showToast}
+                formatLocalDateTime={formatLocalDateTime}
               />
             )}
 

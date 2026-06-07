@@ -218,8 +218,49 @@ const syncNotionDatabase = async (config) => {
   return { addedCount, updatedCount };
 };
 
+/**
+ * Updates scheduled time of a page in Notion database.
+ * @param {string} pageId - Notion page URN ID.
+ * @param {Object} config - Configurations.
+ * @param {Date} scheduledTime - New scheduled date time.
+ * @returns {Promise<void>}
+ */
+const updateNotionPageScheduledTime = async (pageId, config, scheduledTime) => {
+  if (!config.notionToken) return;
+
+  const notion = new Client({ auth: config.notionToken });
+
+  try {
+    const pageDetails = await notion.pages.retrieve({ page_id: pageId });
+    const propertiesKeys = Object.keys(pageDetails.properties);
+    const datePropKey = propertiesKeys.find(key => 
+      key.toLowerCase() === 'schedule' || 
+      key.toLowerCase() === 'date' || 
+      key.toLowerCase() === 'publish time'
+    );
+
+    if (datePropKey) {
+      const patchProperties = {};
+      patchProperties[datePropKey] = {
+        date: {
+          start: scheduledTime.toISOString()
+        }
+      };
+
+      await notion.pages.update({
+        page_id: pageId,
+        properties: patchProperties
+      });
+      console.log(`[Notion Service] Updated scheduled time for page ${pageId} successfully`);
+    }
+  } catch (err) {
+    console.error(`[Notion Service] Failed to update scheduled time on Notion for page ${pageId}:`, err.message);
+  }
+};
+
 module.exports = {
   queryNotionDatabase,
   updateNotionPageStatus,
-  syncNotionDatabase
+  syncNotionDatabase,
+  updateNotionPageScheduledTime
 };

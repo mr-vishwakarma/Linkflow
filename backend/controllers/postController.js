@@ -3,7 +3,7 @@ const path = require('path');
 const Post = require('../models/Post');
 const Config = require('../models/Config');
 const { publishToLinkedIn } = require('../services/linkedinService');
-const { updateNotionPageStatus } = require('../services/notionService');
+const { updateNotionPageStatus, updateNotionPageScheduledTime } = require('../services/notionService');
 const { sendSuccessNotification } = require('../services/notificationService');
 
 const saveImageLocally = (base64Data, filename) => {
@@ -136,9 +136,44 @@ const publishPost = async (req, res) => {
   }
 };
 
+const updatePost = async (req, res) => {
+  try {
+    const { time } = req.body;
+    if (!time) {
+      return res.status(400).json({ success: false, message: 'Schedule Date/Time is required.' });
+    }
+
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+
+    post.scheduledTime = new Date(time);
+    post.status = 'pending';
+    post.error = null;
+    post.postUrl = '';
+    post.postUrn = '';
+    post.postedAt = null;
+
+    await post.save();
+
+    // If it's a Notion post, sync the date change back to Notion
+    if (post.notionPageId && !post.notionPageId.startsWith('local-')) {
+      const config = await Config.getOrCreate();
+      await updateNotionPageScheduledTime(post.notionPageId, config, post.scheduledTime);
+    }
+
+    res.json({ success: true, message: 'Post rescheduled successfully', post });
+  } catch (err) {
+    console.error(`[Post Controller] Rescheduling failed:`, err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getPosts,
   createPost,
   deletePost,
-  publishPost
+  publishPost,
+  updatePost
 };

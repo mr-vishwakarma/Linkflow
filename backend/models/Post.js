@@ -41,6 +41,14 @@ const PostSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  retryCount: {
+    type: Number,
+    default: 0
+  },
+  nextRetryAt: {
+    type: Date,
+    default: null
+  },
   postedAt: {
     type: Date,
     default: null

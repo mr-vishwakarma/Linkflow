@@ -4,11 +4,13 @@ const {
   getPosts, 
   createPost, 
   deletePost, 
-  publishPost 
+  publishPost,
+  updatePost
 } = require('../controllers/postController');
 
 router.get('/', getPosts);
 router.post('/', createPost);
+router.put('/:id', updatePost);
 router.delete('/:id', deletePost);
 router.post('/:id/publish', publishPost);
 
