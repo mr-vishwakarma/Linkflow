@@ -10,7 +10,15 @@ const PostSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  imageUrl: {
+  media: [{
+    type: { type: String, enum: ['image', 'video', 'document'], required: true },
+    url: { type: String, required: true }
+  }],
+  githubLink: {
+    type: String,
+    default: ''
+  },
+  liveLink: {
     type: String,
     default: ''
   },

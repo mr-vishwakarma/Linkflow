@@ -30,34 +30,45 @@ const getPosts = async (req, res) => {
 
 const createPost = async (req, res) => {
   try {
-    const { text, imageUrl, time } = req.body;
+    const { text, media, time, githubLink, liveLink } = req.body;
     if (!text || !time) {
       return res.status(400).json({ success: false, message: 'Caption and Schedule Date/Time are required.' });
     }
 
-    let finalImageUrl = imageUrl ? imageUrl.trim() : '';
+    let finalMedia = [];
 
-    // If it's a base64 encoded image, process upload
-    if (finalImageUrl && finalImageUrl.startsWith('data:image/')) {
-      const matches = finalImageUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const fileType = matches[1];
-        const base64Data = matches[2];
-        const extension = fileType.split('/')[1] || 'png';
-        const filename = `upload-${Date.now()}.${extension}`;
-        
-        if (process.env.IMAGEKIT_PUBLIC_KEY) {
-          try {
-            console.log('[Post Controller] Uploading image to ImageKit...');
-            const { uploadBase64ToImageKit } = require('../services/imagekitService');
-            finalImageUrl = await uploadBase64ToImageKit(base64Data, filename);
-            console.log(`[Post Controller] Upload successful: ${finalImageUrl}`);
-          } catch (uploadErr) {
-            console.error('[Post Controller] ImageKit upload failed, falling back to local storage:', uploadErr.message);
-            finalImageUrl = saveImageLocally(base64Data, filename);
+    if (media && Array.isArray(media)) {
+      for (const item of media) {
+        let { type, url } = item;
+        let finalUrl = url ? url.trim() : '';
+
+        // If it's a base64 encoded media, process upload
+        if (finalUrl && finalUrl.startsWith('data:')) {
+          const matches = finalUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          if (matches && matches.length === 3) {
+            const fileType = matches[1];
+            const base64Data = matches[2];
+            const extension = fileType.split('/')[1] || 'png';
+            const filename = `upload-${Date.now()}-${Math.floor(Math.random() * 1000)}.${extension}`;
+            
+            if (process.env.IMAGEKIT_PUBLIC_KEY) {
+              try {
+                console.log('[Post Controller] Uploading media to ImageKit...');
+                const { uploadBase64ToImageKit } = require('../services/imagekitService');
+                finalUrl = await uploadBase64ToImageKit(base64Data, filename);
+                console.log(`[Post Controller] Upload successful: ${finalUrl}`);
+              } catch (uploadErr) {
+                console.error('[Post Controller] ImageKit upload failed, falling back to local storage:', uploadErr.message);
+                finalUrl = saveImageLocally(base64Data, filename);
+              }
+            } else {
+              finalUrl = saveImageLocally(base64Data, filename);
+            }
           }
-        } else {
-          finalImageUrl = saveImageLocally(base64Data, filename);
+        }
+        
+        if (finalUrl) {
+          finalMedia.push({ type, url: finalUrl });
         }
       }
     }
@@ -65,7 +76,9 @@ const createPost = async (req, res) => {
     const newPost = new Post({
       notionPageId: `local-${Date.now()}`,
       text,
-      imageUrl: finalImageUrl,
+      media: finalMedia,
+      githubLink: githubLink ? githubLink.trim() : '',
+      liveLink: liveLink ? liveLink.trim() : '',
       scheduledTime: new Date(time),
       status: 'pending'
     });

@@ -168,9 +168,31 @@ const testNotion = async (req, res) => {
   }
 };
 
+const ImageKit = require("imagekit");
+
+const getImageKitAuth = async (req, res) => {
+  try {
+    if (!process.env.IMAGEKIT_PUBLIC_KEY || !process.env.IMAGEKIT_PRIVATE_KEY || !process.env.IMAGEKIT_URL_ENDPOINT) {
+      return res.status(400).json({ success: false, message: 'ImageKit credentials are not configured in backend .env' });
+    }
+    
+    const imagekit = new ImageKit({
+      publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+      privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+      urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT
+    });
+    
+    const result = imagekit.getAuthenticationParameters();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'ImageKit Authentication Error', error: err.message });
+  }
+};
+
 module.exports = {
   getConfig,
   updateConfig,
   testLinkedin,
-  testNotion
+  testNotion,
+  getImageKitAuth
 };

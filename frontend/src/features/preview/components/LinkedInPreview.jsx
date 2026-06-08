@@ -48,22 +48,30 @@ export default function LinkedInPreview({ text, imageUrl, authorName }) {
 
         {/* Media */}
         <div className="bg-[#f3f2f0] border-y border-[#e0e0e0] min-h-[180px] flex items-center justify-center relative overflow-hidden">
-          {imageUrl && !imageError ? (
+          {mediaFiles && mediaFiles.length > 0 && mediaFiles[0].type === 'image' && !imageError ? (
             <img 
-              src={imageUrl} 
+              src={mediaFiles[0].url} 
               alt="LinkedIn upload preview" 
               className="w-full max-h-[380px] object-cover block"
               onError={() => setImageError(true)}
             />
+          ) : mediaFiles && mediaFiles.length > 0 && mediaFiles[0].type === 'video' ? (
+             <div className="flex flex-col items-center gap-2 text-stone-600 font-semibold py-12 px-6 w-full text-center bg-stone-200">
+                <span>▶️ Video Preview</span>
+             </div>
+          ) : mediaFiles && mediaFiles.length > 0 && mediaFiles[0].type === 'document' ? (
+             <div className="flex flex-col items-center gap-2 text-stone-600 font-semibold py-12 px-6 w-full text-center bg-stone-200">
+                <span>📄 Document Preview</span>
+             </div>
           ) : (
             <div className="flex flex-col items-center gap-2.5 text-[#666666] text-xs py-12 px-6 w-full text-center">
-              <svg className="text-stone-400" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg className="text-stone-400" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                 <circle cx="8.5" cy="8.5" r="1.5"/>
                 <polyline points="21 15 16 10 5 21"/>
               </svg>
               <span>
-                {imageError ? 'Invalid image link / failed to download source' : 'Post graphic preview (Resolves dynamically from your URL input)'}
+                {imageError ? 'Invalid image link / failed to download source' : 'Post graphic preview (Resolves dynamically from your uploaded media)'}
               </span>
             </div>
           )}

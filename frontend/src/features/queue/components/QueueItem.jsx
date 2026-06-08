@@ -33,13 +33,22 @@ export default function QueueItem({ post, onDelete, onForcePublish, formatLocalD
         {post.text}
       </div>
 
-      {/* Media link */}
-      {post.imageUrl && (
+      {/* Media links */}
+      {post.media && post.media.length > 0 ? (
+        <div className="flex flex-col gap-1.5">
+          {post.media.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-2 p-2.5 bg-[#fbfaf7] border border-stone-200 rounded-lg text-[10px] text-stone-500 overflow-hidden">
+              <ImageIcon className="text-stone-400 shrink-0 w-3.5 h-3.5" />
+              <span className="truncate" title={item.url}>{item.url}</span>
+            </div>
+          ))}
+        </div>
+      ) : post.imageUrl ? (
         <div className="flex items-center gap-2 p-2.5 bg-[#fbfaf7] border border-stone-200 rounded-lg text-[10px] text-stone-500 overflow-hidden">
           <ImageIcon className="text-stone-400 shrink-0 w-3.5 h-3.5" />
           <span className="truncate" title={post.imageUrl}>{post.imageUrl}</span>
         </div>
-      )}
+      ) : null}
 
       {/* Failure Error log */}
       {post.status === 'failed' && post.error && (

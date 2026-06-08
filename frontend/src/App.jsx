@@ -86,7 +86,12 @@ export default function App() {
 
   // Compose state (autosaved to localStorage)
   const [caption, setCaption] = useState(localStorage.getItem('linkflow_draft_caption') || '');
-  const [imageUrl, setImageUrl] = useState(localStorage.getItem('linkflow_draft_imageUrl') || '');
+  const [mediaFiles, setMediaFiles] = useState(() => {
+    const saved = localStorage.getItem('linkflow_draft_mediaFiles');
+    try { return saved ? JSON.parse(saved) : []; } catch (e) { return []; }
+  });
+  const [githubLink, setGithubLink] = useState(localStorage.getItem('linkflow_draft_githubLink') || '');
+  const [liveLink, setLiveLink] = useState(localStorage.getItem('linkflow_draft_liveLink') || '');
   const [scheduleTime, setScheduleTime] = useState(localStorage.getItem('linkflow_draft_scheduleTime') || '');
 
   // Syncing states
@@ -115,8 +120,16 @@ export default function App() {
   }, [caption]);
 
   useEffect(() => {
-    localStorage.setItem('linkflow_draft_imageUrl', imageUrl);
-  }, [imageUrl]);
+    localStorage.setItem('linkflow_draft_mediaFiles', JSON.stringify(mediaFiles));
+  }, [mediaFiles]);
+
+  useEffect(() => {
+    localStorage.setItem('linkflow_draft_githubLink', githubLink);
+  }, [githubLink]);
+
+  useEffect(() => {
+    localStorage.setItem('linkflow_draft_liveLink', liveLink);
+  }, [liveLink]);
 
   useEffect(() => {
     if (scheduleTime) {
@@ -257,6 +270,7 @@ export default function App() {
     localStorage.setItem('token', authData.accessToken);
     localStorage.setItem('refreshToken', authData.refreshToken);
     localStorage.setItem('userEmail', authData.email);
+    showToast('Welcome back!', 'success');
   };
 
   const handleLogoutSilently = () => {
@@ -384,7 +398,9 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: caption,
-          imageUrl: imageUrl,
+          media: mediaFiles,
+          githubLink: githubLink,
+          liveLink: liveLink,
           time: scheduleTime
         })
       });
@@ -392,9 +408,13 @@ export default function App() {
       if (data.success) {
         showToast('Local draft added to queue', 'success');
         setCaption('');
-        setImageUrl('');
+        setMediaFiles([]);
+        setGithubLink('');
+        setLiveLink('');
         localStorage.removeItem('linkflow_draft_caption');
-        localStorage.removeItem('linkflow_draft_imageUrl');
+        localStorage.removeItem('linkflow_draft_mediaFiles');
+        localStorage.removeItem('linkflow_draft_githubLink');
+        localStorage.removeItem('linkflow_draft_liveLink');
         localStorage.removeItem('linkflow_draft_scheduleTime');
         
         // Reset schedule date
@@ -515,8 +535,12 @@ export default function App() {
               <ComposerForm 
                 caption={caption}
                 setCaption={setCaption}
-                imageUrl={imageUrl}
-                setImageUrl={setImageUrl}
+                mediaFiles={mediaFiles}
+                setMediaFiles={setMediaFiles}
+                githubLink={githubLink}
+                setGithubLink={setGithubLink}
+                liveLink={liveLink}
+                setLiveLink={setLiveLink}
                 scheduleTime={scheduleTime}
                 setScheduleTime={setScheduleTime}
                 onSubmit={handleCreatePost}
@@ -587,9 +611,9 @@ export default function App() {
             )}
             {activeTab === 'preview' && (
               <LinkedInPreview 
-                text={caption}
-                imageUrl={imageUrl}
-                authorName={config?.linkedinUrn}
+                text={caption} 
+                mediaFiles={mediaFiles} 
+                authorName={connectionStatus.status === 'connected' ? connectionStatus.text.replace('Connected: ', '') : ''} 
               />
             )}
             {activeTab === 'analytics' && (

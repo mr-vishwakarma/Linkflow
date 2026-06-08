@@ -40,8 +40,8 @@ export default function Navbar({
       
       {/* Branding */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 text-stone-900 bg-stone-100 p-2.5 rounded-xl border border-stone-200 flex items-center justify-center shadow-sm">
-          <Briefcase className="w-6 h-6 text-stone-800" />
+        <div className="w-10 h-10 bg-stone-100 p-1.5 rounded-xl border border-stone-200 flex items-center justify-center shadow-sm">
+          <img src="/assets/logo.png" alt="LinkFlow Logo" className="w-full h-full object-contain" />
         </div>
         <div>
           <h1 className="text-lg font-bold tracking-tight text-stone-900 leading-none">LinkFlow</h1>
