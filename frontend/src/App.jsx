@@ -70,6 +70,21 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState({ status: 'unconfigured', text: 'Checking status...' });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  // Network offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Responsive window width resize trigger
   useEffect(() => {
@@ -206,6 +221,11 @@ export default function App() {
 
   // Custom authenticated fetch wrapper with silent refresh and automatic retries
   const apiFetch = async (url, options = {}) => {
+    if (!navigator.onLine) {
+      setIsOffline(true);
+      throw new Error('No internet connection');
+    }
+
     if (!options.headers) {
       options.headers = {};
     }
@@ -258,7 +278,11 @@ export default function App() {
       }
       return res;
     } catch (err) {
-      showToast(`Network request failed: ${err.message}`, 'error');
+      if (!navigator.onLine || err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        setIsOffline(true);
+      } else {
+        showToast(`Network request failed: ${err.message}`, 'error');
+      }
       throw err;
     }
   };
@@ -300,6 +324,7 @@ export default function App() {
   };
 
   const loadConfig = async () => {
+    if (!navigator.onLine) return;
     try {
       const res = await apiFetch('/api/config');
       const data = await res.json();
@@ -313,6 +338,7 @@ export default function App() {
   };
 
   const loadPosts = async () => {
+    if (!navigator.onLine) return;
     try {
       const res = await apiFetch('/api/posts');
       const data = await res.json();
@@ -478,11 +504,26 @@ export default function App() {
   // Render initial loading screen during auth checking
   if (isAuthChecking) {
     return (
-      <div className="min-h-screen bg-[#fbfaf7] text-stone-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-stone-200 border-t-stone-900 rounded-full animate-spin"></div>
-          <p className="text-xs font-semibold text-stone-500 tracking-wider">Verifying Session...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#fbfaf7] font-sans">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <div className="w-12 h-12 bg-stone-200 rounded-full"></div>
+          <div className="text-stone-400 font-semibold text-sm tracking-widest uppercase">Loading LinkFlow...</div>
         </div>
+      </div>
+    );
+  }
+
+  if (isOffline) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#fbfaf7] font-sans p-4 text-center">
+         <AlertCircle className="w-12 h-12 text-rose-500 mb-4" />
+         <h2 className="text-xl font-bold text-stone-900 mb-2">Connection Lost</h2>
+         <p className="text-sm text-stone-600 mb-6 max-w-sm">
+            It looks like you're offline. Please check your internet connection and try again.
+         </p>
+         <button onClick={() => window.location.reload()} className="px-6 py-2 bg-stone-900 text-white rounded-full font-semibold hover:bg-stone-800 transition cursor-pointer">
+            Retry
+         </button>
       </div>
     );
   }
@@ -546,7 +587,6 @@ export default function App() {
                 onSubmit={handleCreatePost}
                 apiFetch={apiFetch}
                 showToast={showToast}
-                setActiveTab={setActiveTab}
               />
             </section>
           )}

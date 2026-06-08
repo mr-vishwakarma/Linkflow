@@ -178,17 +178,37 @@ const syncNotionDatabase = async (config) => {
       scheduledDate = fallback;
     }
 
-    // 3. Extract Image URL
+    // 3. Extract Image URL / Media Array
     let imgUrl = '';
-    const imageProp = page.properties.Image || page.properties['Image URL'] || page.properties.Graphic;
+    let mediaArr = [];
+    const imageProp = page.properties.Image || page.properties['Image URL'] || page.properties.Graphic || page.properties.Media;
     if (imageProp) {
       if (imageProp.type === 'url' && imageProp.url) {
         imgUrl = imageProp.url;
+        mediaArr.push({ type: 'image', url: imgUrl, name: 'notion_image' });
       } else if (imageProp.type === 'files' && imageProp.files && imageProp.files.length > 0) {
-        const file = imageProp.files[0];
-        imgUrl = file.type === 'external' ? file.external.url : (file.file ? file.file.url : '');
+        // Handle multiple files
+        imageProp.files.forEach(file => {
+          const fileUrl = file.type === 'external' ? file.external.url : (file.file ? file.file.url : '');
+          if (fileUrl) {
+            let type = 'image';
+            if (fileUrl.includes('.mp4') || fileUrl.includes('.mov')) type = 'video';
+            else if (fileUrl.includes('.pdf')) type = 'document';
+            mediaArr.push({ type, url: fileUrl, name: file.name || 'notion_media' });
+          }
+        });
+        if (mediaArr.length > 0) imgUrl = mediaArr[0].url; // keep legacy imageUrl sync
       }
     }
+
+    // 4. Extract GitHub Link and Live Link
+    let ghLink = '';
+    const ghProp = page.properties['GitHub'] || page.properties['GitHub Link'];
+    if (ghProp && ghProp.type === 'url') ghLink = ghProp.url;
+
+    let lvLink = '';
+    const lvProp = page.properties['Live'] || page.properties['Live Link'];
+    if (lvProp && lvProp.type === 'url') lvLink = lvProp.url;
 
     // Check if duplicate exists
     const existing = await Post.findOne({ notionPageId: pageId });
@@ -198,6 +218,9 @@ const syncNotionDatabase = async (config) => {
         notionPageId: pageId,
         text: captionText,
         imageUrl: imgUrl,
+        media: mediaArr,
+        githubLink: ghLink,
+        liveLink: lvLink,
         scheduledTime: scheduledDate,
         status: 'pending'
       });
@@ -206,6 +229,9 @@ const syncNotionDatabase = async (config) => {
       if (existing.status === 'pending' || existing.status === 'failed') {
         existing.text = captionText;
         existing.imageUrl = imgUrl;
+        existing.media = mediaArr;
+        existing.githubLink = ghLink;
+        existing.liveLink = lvLink;
         existing.scheduledTime = scheduledDate;
         existing.status = 'pending';
         existing.error = null;
