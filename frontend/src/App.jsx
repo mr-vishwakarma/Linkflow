@@ -546,6 +546,7 @@ export default function App() {
                 onSubmit={handleCreatePost}
                 apiFetch={apiFetch}
                 showToast={showToast}
+                setActiveTab={setActiveTab}
               />
             </section>
           )}

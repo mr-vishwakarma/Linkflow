@@ -15,7 +15,8 @@ import {
   Wand2,
   Trash2,
   Code2,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Eye
 } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -35,7 +36,8 @@ export default function ComposerForm({
   setScheduleTime, 
   onSubmit,
   apiFetch,
-  showToast
+  showToast,
+  setActiveTab
 }) {
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
@@ -167,7 +169,7 @@ export default function ComposerForm({
            showToast('Uploading video to ImageKit...', 'info');
            const url = await uploadMediaToImageKit(file.url, apiFetch);
            finalMediaFiles[i].url = url;
-        }
+         }
       }
       
       // We pass the updated finalMediaFiles to the parent's onSubmit
@@ -447,19 +449,32 @@ export default function ComposerForm({
           </div>
         </div>
 
-        {/* Action Button */}
-        <button 
-          type="submit" 
-          disabled={isSubmitting}
-          className="w-full flex items-center justify-center gap-2.5 px-5 py-3 rounded-full text-xs font-bold bg-stone-900 text-white hover:bg-stone-800 transition duration-200 mt-2 shadow-sm cursor-pointer disabled:bg-stone-400"
-        >
-          {isSubmitting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <PlusCircle className="w-4 h-4" />
+        {/* Action Buttons */}
+        <div className="flex gap-3 mt-2">
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3 rounded-full text-xs font-bold bg-stone-900 text-white hover:bg-stone-800 transition duration-200 shadow-sm cursor-pointer disabled:bg-stone-400"
+          >
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <PlusCircle className="w-4 h-4" />
+            )}
+            <span>{isSubmitting ? 'Queueing...' : 'Queue Local Post'}</span>
+          </button>
+          
+          {setActiveTab && (
+            <button 
+              type="button"
+              onClick={() => setActiveTab('preview')}
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs font-bold bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 transition duration-200 shadow-sm cursor-pointer"
+            >
+              <Eye className="w-4 h-4" />
+              <span>Feed Simulator</span>
+            </button>
           )}
-          <span>{isSubmitting ? 'Queueing...' : 'Queue Local Post'}</span>
-        </button>
+        </div>
       </form>
     </div>
   );
