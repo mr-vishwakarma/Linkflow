@@ -20,6 +20,9 @@ import Login from './features/auth/components/Login';
 import Signup from './features/auth/components/Signup';
 import AnalyticsDashboard from './features/analytics/components/AnalyticsDashboard';
 import ContentCalendar from './features/calendar/components/ContentCalendar';
+import LoadingScreen from './components/LoadingScreen';
+import OfflineScreen from './components/OfflineScreen';
+import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -489,6 +492,23 @@ export default function App() {
     setDeleteConfirmation({ isOpen: true, postId: id });
   };
 
+  const handleConfirmDelete = async () => {
+    const id = deleteConfirmation.postId;
+    setDeleteConfirmation({ isOpen: false, postId: null });
+    try {
+      const res = await apiFetch(`/api/posts/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Post removed successfully', 'info');
+        loadPosts();
+      } else {
+        showToast('Failed to delete post', 'error');
+      }
+    } catch (err) {
+      showToast('Network error deleting post', 'error');
+    }
+  };
+
   const formatLocalDateTime = (dateTimeStr) => {
     const dateObj = new Date(dateTimeStr);
     if (isNaN(dateObj.getTime())) return dateTimeStr;
@@ -503,29 +523,11 @@ export default function App() {
 
   // Render initial loading screen during auth checking
   if (isAuthChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fbfaf7] font-sans">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
-          <div className="w-12 h-12 bg-stone-200 rounded-full"></div>
-          <div className="text-stone-400 font-semibold text-sm tracking-widest uppercase">Loading LinkFlow...</div>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (isOffline) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#fbfaf7] font-sans p-4 text-center">
-         <AlertCircle className="w-12 h-12 text-rose-500 mb-4" />
-         <h2 className="text-xl font-bold text-stone-900 mb-2">Connection Lost</h2>
-         <p className="text-sm text-stone-600 mb-6 max-w-sm">
-            It looks like you're offline. Please check your internet connection and try again.
-         </p>
-         <button onClick={() => window.location.reload()} className="px-6 py-2 bg-stone-900 text-white rounded-full font-semibold hover:bg-stone-800 transition cursor-pointer">
-            Retry
-         </button>
-      </div>
-    );
+    return <OfflineScreen />;
   }
 
   // Render Auth screens if not logged in
@@ -587,6 +589,7 @@ export default function App() {
                 onSubmit={handleCreatePost}
                 apiFetch={apiFetch}
                 showToast={showToast}
+                setActiveTab={setActiveTab}
               />
             </section>
           )}
@@ -715,45 +718,11 @@ export default function App() {
         apiFetch={apiFetch}
       />
       {/* Delete Confirmation Modal */}
-      {deleteConfirmation.isOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white border border-stone-200 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-stone-900">
-            <h3 className="text-sm font-bold text-stone-900 mb-2">Delete Scheduled Post</h3>
-            <p className="text-xs text-stone-500 mb-6">Are you sure you want to remove this post from the scheduling queue? This action cannot be undone.</p>
-            <div className="flex justify-end gap-3">
-              <button 
-                type="button"
-                onClick={() => setDeleteConfirmation({ isOpen: false, postId: null })}
-                className="px-4 py-2 rounded-full text-xs font-semibold border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button 
-                type="button"
-                onClick={async () => {
-                  const id = deleteConfirmation.postId;
-                  setDeleteConfirmation({ isOpen: false, postId: null });
-                  try {
-                    const res = await apiFetch(`/api/posts/${id}`, { method: 'DELETE' });
-                    const data = await res.json();
-                    if (data.success) {
-                      showToast('Post removed successfully', 'info');
-                      loadPosts();
-                    } else {
-                      showToast('Failed to delete post', 'error');
-                    }
-                  } catch (err) {
-                    showToast('Network error deleting post', 'error');
-                  }
-                }}
-                className="px-4 py-2 rounded-full text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition duration-150 shadow-sm cursor-pointer"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, postId: null })}
+        onConfirm={handleConfirmDelete}
+      />
 
       {/* Global notifications overlay */}
       <ToastContainer 

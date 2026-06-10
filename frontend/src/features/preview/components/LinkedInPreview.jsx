@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 
-export default function LinkedInPreview({ text, imageUrl, authorName }) {
+export default function LinkedInPreview({ text, mediaFiles, authorName }) {
   const [imageError, setImageError] = useState(false);
 
-  // Reset image error state when imageUrl changes
+  // Reset image error state when mediaFiles changes
   useEffect(() => {
     setImageError(false);
-  }, [imageUrl]);
+  }, [mediaFiles]);
 
   const displayAuthorName = authorName || 'LinkedIn Profile';
   const displayAvatarLetter = displayAuthorName.substring(0, 10) === 'urn:li:per' 
